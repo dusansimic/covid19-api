@@ -35,6 +35,7 @@ func main() {
 
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
+	router.Use(cors.Default())
 
 	api := router.Group("/api/v1")
 
@@ -55,6 +56,5 @@ func main() {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Country not found!"})
 	})
 
-	router.Use(cors.Default())
 	router.Run()
 }
