@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -54,5 +55,6 @@ func main() {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Country not found!"})
 	})
 
+	router.Use(cors.Default())
 	router.Run()
 }
