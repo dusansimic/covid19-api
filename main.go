@@ -33,6 +33,13 @@ func main() {
 	var countries []Country
 	json.Unmarshal(byteValue, &countries)
 
+	countriesMap := make(map[string][]TimelineDay)
+	for _, country := range countries {
+		countriesMap[country.Name] = country.Timeline
+	}
+
+	countries = nil
+
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
 	router.Use(cors.Default())
@@ -46,11 +53,10 @@ func main() {
 			return
 		}
 
-		for _, country := range countries {
-			if country.Name == countryName {
-				ctx.JSON(http.StatusOK, country.Timeline)
-				return
-			}
+		timeline := countriesMap[countryName]
+		if timeline != nil {
+			ctx.JSON(http.StatusOK, timeline)
+			return
 		}
 
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Country not found!"})
