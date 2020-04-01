@@ -42,48 +42,95 @@ def unique(array):
 for country in unique(list(map(lambda row: row[1], confirmedData))):
 	countries.append({
 		'name': country,
-		'timeline': []
+		'timeline': [],
+		'states': []
 	})
+
+def arrayToIntArray(arr):
+	return list(map(lambda val: int(val), arr))
 
 def makeMapOut(country):
 	def mapOut(data):
 		dataCountry = list(filter(lambda row: row[1] == country, data))
-		dataCountry = list(map(lambda row: row[4:], dataCountry))
-		dataCountry = list(zip(*dataCountry))
-		dataCountry = list(map(lambda entry: sum(list(map(lambda val: int(val), entry))), dataCountry))
-		return dataCountry
+		dataStates = list(map(lambda row: arrayToIntArray(row[4:]), dataCountry))
+		dataCountry = list(zip(*dataStates))
+		dataCountry = list(map(lambda entry: sum(entry), dataCountry))
+		return (dataCountry, dataStates)
 	return mapOut
+
+def mapIntoTimeline(datesRow, confirmedTuple, deathsTuple, recoveredTuple):
+	useConfirmed, confirmedData = confirmedTuple
+	useDeaths, deathsData = deathsTuple
+	useRecovered, recoveredData = recoveredTuple
+	def addConfirmed(dictionary, confirmed, confirmedPrev):
+		dictionary['confirmed'] = confirmed
+		dictionary['newConfirmed'] = confirmed - confirmedPrev
+		return dictionary
+	def addDeaths(dictionary, deaths, deathsPrev):
+		dictionary['deaths'] = deaths
+		dictionary['newDeaths'] = deaths - deathsPrev
+		return dictionary
+	def addRecovered(dictionary, recovered, recoveredPrev):
+		dictionary['recovered'] = recovered
+		dictionary['newRecovered'] = recovered - recoveredPrev
+		return dictionary
+
+	timeline = []
+
+	for i, el in enumerate(confirmedData):
+		date = datesRow[i].split('/')
+		if i == 0:
+			dictionary = {
+				'date': datetime.date(2000 + int(date[2]), int(date[0]), int(date[1])).isoformat()
+			}
+			if (useConfirmed):
+				dictionary = addConfirmed(dictionary, el, 0)
+			if (useDeaths):
+				dictionary = addDeaths(dictionary, deathsData[i], 0)
+			if (useRecovered):
+				dictionary = addRecovered(dictionary, recoveredData[i], 0)
+			timeline.append(dictionary)
+		else:
+			dictionary = {
+				'date': datetime.date(2000 + int(date[2]), int(date[0]), int(date[1])).isoformat()
+			}
+			if (useConfirmed):
+				dictionary = addConfirmed(dictionary, el, confirmedData[i - 1])
+			if (useDeaths):
+				dictionary = addDeaths(dictionary, deathsData[i], deathsData[i - 1])
+			if (useRecovered):
+				dictionary = addRecovered(dictionary, recoveredData[i], recoveredData[i - 1])
+			timeline.append(dictionary)
+
+	return timeline
 
 for country in countries:
 	mapOut = makeMapOut(country['name'])
-	confirmedDataCountry = mapOut(confirmedData)
-	deathsDataCountry = mapOut(deathsData)
-	recoveredDataCountry = mapOut(recoveredData)
+	statesList = list(map(lambda row: row[0], list(filter(lambda row: row[1] == country['name'], confirmedData))))
+	confirmedDataCountry, confirmedDataState = mapOut(confirmedData)
+	deathsDataCountry, deathsDataState = mapOut(deathsData)
+	recoveredDataCountry, recoveredDataState = mapOut(recoveredData)
 
-	timeline = country['timeline']
+	country['timeline'] = mapIntoTimeline(datesRow, (True, confirmedDataCountry), (True, deathsDataCountry), (True, recoveredDataCountry))
 
-	for i, el in enumerate(confirmedDataCountry):
-		date = datesRow[i].split('/')
-		if i == 0:
-			timeline.append({
-				'date': datetime.date(2000 + int(date[2]), int(date[0]), int(date[1])).isoformat(),
-				'confirmed': el,
-				'newConfirmed': el,
-				'deaths': deathsDataCountry[i],
-				'newDeaths': deathsDataCountry[i],
-				'recovered': recoveredDataCountry[i],
-				'newRecovered': recoveredDataCountry[i]
+	states = country['states']
+	# Are there any states? If not, remove sates key.
+	if statesList[0] != '':
+		# Check if number of states is equal to number of different data sets.
+		# If it's not, that means that some data set doesn't have data for each
+		# state and we are going to assume that data sets for each state is not
+		# specifed. There are some examples of this like Canada.
+		useConfirmed = len(confirmedDataState) == len(statesList)
+		useDeaths = len(deathsDataState) == len(statesList)
+		useRecovered = len(recoveredDataState) == len(statesList)
+
+		for i, state in enumerate(statesList):
+			states.append({
+				'name': state,
+				'timeline': mapIntoTimeline(datesRow, (useConfirmed, confirmedDataState[i] if useConfirmed else None), (useDeaths, deathsDataState[i] if useDeaths else None), (useRecovered, recoveredDataState[i] if useRecovered else None))
 			})
-		else:
-			timeline.append({
-				'date': datetime.date(2000 + int(date[2]), int(date[0]), int(date[1])).isoformat(),
-				'confirmed': el,
-				'newConfirmed': el - confirmedDataCountry[i - 1],
-				'deaths': deathsDataCountry[i],
-				'newDeaths': deathsDataCountry[i] - deathsDataCountry[i - 1],
-				'recovered': recoveredDataCountry[i],
-				'newRecovered': recoveredDataCountry[i] - recoveredDataCountry[i - 1]
-			})
+	else:
+		states = []
 
 with open('timelines.json', 'w') as file:
 	json.dump(countries, file)

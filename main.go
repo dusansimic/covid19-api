@@ -12,6 +12,7 @@ import (
 type Country struct {
 	Name string `json:"name"`
 	Timeline []TimelineDay `json:"timeline"`
+	States []State
 }
 
 type TimelineDay struct {
@@ -24,6 +25,11 @@ type TimelineDay struct {
 	NewRecovered int `json:"newRecovered"`
 }
 
+type State struct {
+	Name string `json:"name"`
+	Timeline []TimelineDay `json:"timeline"`
+}
+
 func main() {
 	byteValue, err := ioutil.ReadFile("timelines.json")
 	if err != nil {
@@ -33,9 +39,9 @@ func main() {
 	var countries []Country
 	json.Unmarshal(byteValue, &countries)
 
-	countriesMap := make(map[string][]TimelineDay)
+	countriesMap := make(map[string]Country)
 	for _, country := range countries {
-		countriesMap[country.Name] = country.Timeline
+		countriesMap[country.Name] = country
 	}
 
 	countries = nil
@@ -53,13 +59,20 @@ func main() {
 			return
 		}
 
-		timeline := countriesMap[countryName]
-		if timeline != nil {
-			ctx.JSON(http.StatusOK, timeline)
+		country := countriesMap[countryName]
+		if country.Name == "" {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Country not found!"})
 			return
 		}
 
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Country not found!"})
+		getStates := ctx.Query("states")
+		if getStates == "true" {
+			ctx.JSON(http.StatusOK, country.States)
+			return
+		}
+
+		ctx.JSON(http.StatusOK, country.Timeline)
+
 	})
 
 	router.Run()
