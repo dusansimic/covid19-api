@@ -6,29 +6,42 @@ CONFIRMED_FILE = 'time_series_covid19_confirmed_global.csv'
 DEATHS_FILE = 'time_series_covid19_deaths_global.csv'
 RECOVERED_FILE = 'time_series_covid19_recovered_global.csv'
 
-datesRow = None
-confirmedData = None
-deathsData = None
-recoveredData = None
+datesRow = []
+confirmedData = []
+deathsData = []
+recoveredData = []
 
 # A small hack to change South Korea name so the comma won't break the format
-def southKoreaNameCheck(row):
-	if row.split(',')[1] != '"Korea':
-		return row.rstrip('\n').split(',')
-	return row.replace('"Korea, South"', 'South Korea').rstrip('\n').split(',')
+# def southKoreaNameCheck(row):
+# 	if row.split(',')[1] != '"Korea':
+# 		return row.rstrip('\n').split(',')
+# 	return row.replace('"Korea, South"', 'South Korea').rstrip('\n').split(',')
 
 with open(CONFIRMED_FILE, 'r') as csv_file:
-	data = csv_file.readlines()
-	datesRow = data[0].rstrip('\n').split(',')[4:]
-	confirmedData = list(map(southKoreaNameCheck, data[1:]))
+	reader = csv.reader(csv_file, delimiter=',', quotechar='"')
+	readDates = True
+	for row in reader:
+		if readDates:
+			datesRow = row[4:]
+			readDates = False
+		else:
+			confirmedData.append(row)
 
 with open(DEATHS_FILE, 'r') as csv_file:
-	data = csv_file.readlines()
-	deathsData = list(map(southKoreaNameCheck, data[1:]))
+	reader = csv.reader(csv_file, delimiter=',', quotechar='"')
+	readDates = True
+	for row in reader:
+		if readDates: readDates = False
+		else:
+			deathsData.append(row)
 
 with open(RECOVERED_FILE, 'r') as csv_file:
-	data = csv_file.readlines()
-	recoveredData = list(map(southKoreaNameCheck, data[1:]))
+	reader = csv.reader(csv_file, delimiter=',', quotechar='"')
+	readDates = True
+	for row in reader:
+		if readDates: readDates = False
+		else:
+			recoveredData.append(row)
 
 countries = []
 
